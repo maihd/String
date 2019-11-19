@@ -103,7 +103,7 @@ string StringFormat(int bufferSize, string format, ...)
 
     va_list argv;
     va_start(argv, format);
-    int length = (int)vsprintf(buffer->data, format, argv);
+    int length = (int)vsnprintf(buffer->data, bufferSize, format, argv);
     va_end(argv);
 
     buffer->length = length;
@@ -114,7 +114,7 @@ string StringFormat(int bufferSize, string format, ...)
 string StringFormatArgv(int bufferSize, string format, va_list argv)
 {
     StringBuffer* buffer = StringBufferNew(bufferSize);
-    buffer->length = vsprintf(buffer->data, format, argv);
+    buffer->length = vsnprintf(buffer->data, bufferSize, format, argv);
     return buffer->data;
 }
 
