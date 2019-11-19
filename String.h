@@ -11,14 +11,19 @@
 extern "C" {
 #endif
 
-STRING_API char* String(int size, const char* format, ...);
-STRING_API void  StringFree(char* string);
+// NO POINTER for safety
+typedef char* string;
 
-STRING_API char* StringFormat(char* string, const char* format, ...);
-STRING_API char* StringFormatArgv(char* string, const char* format, va_list argv);
+STRING_API string String(int size, const string format, ...);
+STRING_API void   StringFree(string target);
 
-STRING_API int   StringSize(const char* string);
-STRING_API int   StringLength(const char* string);
+STRING_API string StringFormat(string target, const string format, ...);
+STRING_API string StringFormatArgv(string target, const string format, va_list argv);
+
+STRING_API int    StringSize(const string target);
+STRING_API int    StringLength(const string target);
+
+STRING_API int    StringIsValid(const string target);
 
 #ifdef __cplusplus
 }
@@ -39,8 +44,14 @@ typedef struct StringBuffer
 } StringBuffer;
 
 static StringBuffer sEmptyStringBuffer;
+static string       sEmptyString = sEmptyStringBuffer.data;
 
-char* String(int size, const char* format, ...)
+int StringIsValid(const string target)
+{
+    return target && target != sEmptyString;
+}
+
+string String(int size, const string format, ...)
 {
     if (size <= 0)
     {
@@ -58,11 +69,11 @@ char* String(int size, const char* format, ...)
     return buffer->data;
 }
 
-void StringFree(char* string)
+void StringFree(string target)
 {
-    if (string)
+    if (StringIsValid(target))
     {
-        StringBuffer* buffer = (StringBuffer*)(string - sizeof(StringBuffer));
+        StringBuffer* buffer = (StringBuffer*)(target - sizeof(StringBuffer));
         if (buffer != &sEmptyStringBuffer)
         {
             free(buffer);
@@ -70,39 +81,39 @@ void StringFree(char* string)
     }   
 }
 
-char* StringFormat(char* string, const char* format, ...)
+string StringFormat(string target, const string format, ...)
 {
-    if (string)
+    if (StringIsValid(target))
     {
         va_list argv;
         va_start(argv, format);
-        StringFormat(string, format, argv);
+        StringFormat(target, format, argv);
         va_end(argv);
     }
     
-    return string;
+    return target;
 }
 
-char* StringFormatArgv(char* string, const char* format, va_list argv)
+string StringFormatArgv(string target, const string format, va_list argv)
 {
-    vsprintf(string, format, argv);
-    return string;
+    vsprintf(target, format, argv);
+    return target;
 }
 
-int StringSize(const char* string)
+int StringSize(const string target)
 {
-    if (string)
+    if (StringIsValid(target))
     {
-        StringBuffer* buffer = (StringBuffer*)(string - sizeof(StringBuffer));
+        StringBuffer* buffer = (StringBuffer*)(target - sizeof(StringBuffer));
         return buffer->size;
     }
 
     return 0;
 }
 
-int StringLength(const char* string)
+int StringLength(const string target)
 {
-    return (int)strlen(string);
+    return (int)strlen(target);
 }
 
 #endif // STRIGN_IMPL

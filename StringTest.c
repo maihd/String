@@ -5,7 +5,7 @@
 
 int main()
 {
-    char* greeting = String(64, "Hello world, my name is: %s", "DancingConcat");
+    string greeting = String(64, "Hello world, my name is: %s", "DancingConcat");
     printf("Greeting: %s\n", greeting);    
 
     StringFree(greeting);
