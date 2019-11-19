@@ -54,7 +54,7 @@ int StringIsHeap(const string target)
 {
     if (target && target != sEmptyString)
     {
-        StringBuffer* buffer = (StringBuffer*)target;
+        StringBuffer* buffer = (StringBuffer*)(target - sizeof(StringBuffer));
         return buffer->memtag == sMemoryTag;
     }
     else
@@ -136,4 +136,4 @@ int StringLength(string target)
     }
 }
 
-#endif // STRIGN_IMPL
+#endif // STRING_IMPL
