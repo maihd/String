@@ -5,7 +5,7 @@
 
 int main()
 {
-    string greeting = String(64, "Hello world, my name is: %s", "DancingConcat");
+    string greeting = StringFormat(64, "Hello world, my name is: %s", "DancingConcat");
     printf("Greeting: %s\n", greeting);    
 
     StringFree(greeting);

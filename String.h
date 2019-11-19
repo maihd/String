@@ -48,7 +48,7 @@ typedef struct StringBuffer
 } StringBuffer;
 
 static string sEmptyString = "";
-static long   sMemoryTag   = (long)sEmptyString;
+static long   sMemoryTag   = (long)("__string_memory_tag__");
 
 int StringIsHeap(const string target)
 {
@@ -73,17 +73,19 @@ StringBuffer* StringBufferNew(int length)
 
 string String(string source)
 {
-    if (size <= 0)
-    {
-        return sEmptyStringBuffer.data;
-    }
-
     int length = StringLength(source);
-    StringBuffer* buffer = StringBufferNew(length);
-    
-    strncpy(buffer->data, length, source);
-    
-    return buffer->data;
+    if (length == 0)
+    {
+        return sEmptyString;
+    }
+    else
+    {
+        StringBuffer* buffer = StringBufferNew(length);
+        
+        strncpy(buffer->data, source, length);
+        
+        return buffer->data;
+    }
 }
 
 void StringFree(string target)
@@ -101,7 +103,7 @@ string StringFormat(int bufferSize, string format, ...)
 
     va_list argv;
     va_start(argv, format);
-    int length = (int)vsprintf(target, format, argv);
+    int length = (int)vsprintf(buffer->data, format, argv);
     va_end(argv);
 
     buffer->length = length;
@@ -109,15 +111,20 @@ string StringFormat(int bufferSize, string format, ...)
     return buffer->data;
 }
 
-string StringFormatArgv(string target, string format, va_list argv)
+string StringFormatArgv(int bufferSize, string format, va_list argv)
 {
     StringBuffer* buffer = StringBufferNew(bufferSize);
-    buffer->length = vsprintf(target, format, argv);
-    return target;
+    buffer->length = vsprintf(buffer->data, format, argv);
+    return buffer->data;
 }
 
 int StringLength(string target)
 {
+    if (target == sEmptyString)
+    {
+        return 0;
+    }
+
     if (StringIsHeap(target))
     {
         StringBuffer* buffer = (StringBuffer*)(target - sizeof(StringBuffer));
