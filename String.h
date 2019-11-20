@@ -42,17 +42,25 @@ STRING_API int    StringIsSmart(string target);
 #include <stdlib.h>
 #include <string.h>
 
+#ifndef STRING_CONST_HASH_U64
+#define STRING_CONST_HASH_U64(string, defaultValue) (uint64_t)(defaultValue)
+#endif
+
+#ifndef UINT64_MAX
+typedef unsigned long long uint64_t; 
+#endif
+
 typedef struct StringBuffer
 {
-    int  length;
-    //int  memref;
-    long memtag;
-    char data[];
+    int         length;
+    int         memref;
+    uint64_t    memtag;
+    char        data[];
 } StringBuffer;
 
-static string sEmptyString = "";
-static long   sHeapMemtag  = (long)("__string_heap_memory_tag__");
-static long   sWeakMemtag  = (long)("__string_stack_memory_tag__");
+static string   sEmptyString = "";
+static uint64_t sHeapMemtag  = STRING_CONST_HASH_U64("__string_heap_memory_tag__", 0xa020b127788efe8fULL);  // ISO CRC64
+static uint64_t sWeakMemtag  = STRING_CONST_HASH_U64("__string_stack_memory_tag__", 0xb166f1068d721eceULL); // ISO CRC64
 
 int StringIsHeap(string target)
 {
@@ -97,12 +105,20 @@ StringBuffer* StringBufferNew(int length)
 {
     StringBuffer* buffer = (StringBuffer*)malloc(length + 1 + sizeof(StringBuffer));
     buffer->length = length;
+    buffer->memref = 1;
     buffer->memtag = sHeapMemtag;
     return buffer;
 }
 
 string String(string source)
 {
+    if (StringIsHeap(source))
+    {
+        StringBuffer* buffer = (StringBuffer*)(source - sizeof(StringBuffer));
+        buffer->memref++;
+        return source;
+    }
+
     int length = StringLength(source);
     if (length == 0)
     {
@@ -123,7 +139,10 @@ void StringFree(string target)
     if (StringIsHeap(target))
     {
         StringBuffer* buffer = (StringBuffer*)(target - sizeof(StringBuffer));
-        free(buffer);
+        if (--buffer->memref <= 0)
+        {
+            free(buffer);
+        }
     }   
 }
 
