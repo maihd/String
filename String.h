@@ -20,12 +20,15 @@ STRING_API void   StringFree(string target);
 STRING_API string StringFormat(int bufferSize, string format, ...);
 STRING_API string StringFormatArgv(int bufferSize, string format, va_list argv);
 
-//STRING_API string StringFormatBuffer(char[] buffer, string format, ...);
-//STRING_API string StringFormatBufferArgv(char[] buffer, string format, va_list argv);
+STRING_API string StringFrom(void* buffer, string source);
+STRING_API string StringFormatBuffer(void* buffer, string format, ...);
+STRING_API string StringFormatBufferArgv(void* buffer, string format, va_list argv);
 
 STRING_API int    StringLength(string target);
 
 STRING_API int    StringIsHeap(string target);
+STRING_API int    StringIsWeak(string target);
+STRING_API int    StringIsSmart(string target);
 
 #ifdef __cplusplus
 }
@@ -48,14 +51,41 @@ typedef struct StringBuffer
 } StringBuffer;
 
 static string sEmptyString = "";
-static long   sMemoryTag   = (long)("__string_memory_tag__");
+static long   sHeapMemtag  = (long)("__string_heap_memory_tag__");
+static long   sWeakMemtag  = (long)("__string_stack_memory_tag__");
 
-int StringIsHeap(const string target)
+int StringIsHeap(string target)
 {
     if (target && target != sEmptyString)
     {
         StringBuffer* buffer = (StringBuffer*)(target - sizeof(StringBuffer));
-        return buffer->memtag == sMemoryTag;
+        return buffer->memtag == sHeapMemtag;
+    }
+    else
+    {
+        return 0;
+    }
+}
+
+int StringIsWeak(string target)
+{
+    if (target && target != sEmptyString)
+    {
+        StringBuffer* buffer = (StringBuffer*)(target - sizeof(StringBuffer));
+        return buffer->memtag == sWeakMemtag;
+    }
+    else
+    {
+        return 0;
+    }
+}
+
+int StringIsSmart(string target)
+{
+    if (target && target != sEmptyString)
+    {
+        StringBuffer* buffer = (StringBuffer*)(target - sizeof(StringBuffer));
+        return buffer->memtag == sWeakMemtag || buffer->memtag == sHeapMemtag;
     }
     else
     {
@@ -67,7 +97,7 @@ StringBuffer* StringBufferNew(int length)
 {
     StringBuffer* buffer = (StringBuffer*)malloc(length + 1 + sizeof(StringBuffer));
     buffer->length = length;
-    buffer->memtag = sMemoryTag;
+    buffer->memtag = sHeapMemtag;
     return buffer;
 }
 
@@ -97,6 +127,25 @@ void StringFree(string target)
     }   
 }
 
+string StringFrom(void* buffer, string source)
+{
+    int length = StringLength(source);
+    if (length == 0)
+    {
+        return sEmptyString;
+    }
+    else
+    {
+        StringBuffer* stringBuffer = (StringBuffer*)buffer;
+        stringBuffer->length = length;
+        stringBuffer->memtag = sWeakMemtag;
+
+        strncpy(stringBuffer->data, source, length);
+        
+        return stringBuffer->data;
+    }
+}
+
 string StringFormat(int bufferSize, string format, ...)
 {
     StringBuffer* buffer = StringBufferNew(bufferSize);
@@ -114,8 +163,33 @@ string StringFormat(int bufferSize, string format, ...)
 string StringFormatArgv(int bufferSize, string format, va_list argv)
 {
     StringBuffer* buffer = StringBufferNew(bufferSize);
-    buffer->length = vsnprintf(buffer->data, bufferSize, format, argv);
+    buffer->length = (int)vsnprintf(buffer->data, bufferSize, format, argv);
     return buffer->data;
+}
+
+string StringFormatBuffer(void* buffer, string format, ...)
+{
+    StringBuffer* stringBuffer = (StringBuffer*)(buffer);
+
+    va_list argv;
+    va_start(argv, format);
+    int length = (int)vsprintf(stringBuffer->data, format, argv);
+    va_end(argv);
+
+    stringBuffer->length = length;
+    stringBuffer->memtag = sWeakMemtag;
+    
+    return stringBuffer->data;
+}
+
+string StringFormatBufferArgv(void* buffer, string format, va_list argv)
+{
+    StringBuffer* stringBuffer = (StringBuffer*)(buffer);
+
+    stringBuffer->length = (int)vsprintf(stringBuffer->data, format, argv);
+    stringBuffer->memtag = sWeakMemtag;
+    
+    return stringBuffer->data;
 }
 
 int StringLength(string target)
@@ -125,7 +199,7 @@ int StringLength(string target)
         return 0;
     }
 
-    if (StringIsHeap(target))
+    if (StringIsSmart(target))
     {
         StringBuffer* buffer = (StringBuffer*)(target - sizeof(StringBuffer));
         return buffer->length;
