@@ -1,5 +1,12 @@
+CC=cc
+EXE=StringTest
+
+ifeq (Windows_NT,$(OS))
+EXE=StringTest.exe
+endif
+
 all:
-	gcc -o StringTest StringTest.c -Wall -Wextra
+	$(CC) -o $(EXE) StringTest.c String.c -Wall -Wextra
 
 clean: 
 	rm -f StringTest

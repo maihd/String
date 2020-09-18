@@ -5,3 +5,6 @@
 *.o
 *.out
 *.exe
+
+/StringTest
+/StringTest.exe

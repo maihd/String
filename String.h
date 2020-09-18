@@ -7,28 +7,51 @@
 #define STRING_API
 #endif
 
+#if !defined(__cplusplus) && !defined(__bool_true_false_are_defined)
+#   if __STDC_VERSION__ >= 199409L
+#       include <stdbool.h>
+#   else
+enum
+{
+    true = 1,
+    false = 0
+};
+typedef char bool;
+#   endif
+#endif
+
+#ifndef UINT64_MAX
+typedef unsigned long long uint64_t; 
+#endif
+
+typedef struct StringBuffer
+{
+    uint64_t    memtag;
+    int         memref;
+    int         length;
+    char        data[];
+} StringBuffer;
+
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-// NO POINTER & IMMUTABLE for safety
-typedef const char* string;
+STRING_API const char*          String(const char* source);
+STRING_API void                 StringFree(const char* target);
 
-STRING_API string String(string source);
-STRING_API void   StringFree(string target);
+STRING_API const char*          StringFormat(int bufferSize, const char* format, ...);
+STRING_API const char*          StringFormatArgv(int bufferSize, const char* format, va_list argv);
 
-STRING_API string StringFormat(int bufferSize, string format, ...);
-STRING_API string StringFormatArgv(int bufferSize, string format, va_list argv);
+STRING_API const char*          StringFrom(void* buffer, const char* source);
+STRING_API const char*          StringFormatBuffer(void* buffer, const char* format, ...);
+STRING_API const char*          StringFormatBufferArgv(void* buffer, const char* format, va_list argv);
 
-STRING_API string StringFrom(void* buffer, string source);
-STRING_API string StringFormatBuffer(void* buffer, string format, ...);
-STRING_API string StringFormatBufferArgv(void* buffer, string format, va_list argv);
+STRING_API int                  StringLength(const char* target);
+STRING_API const StringBuffer*  StringGetBuffer(const char* target);
 
-STRING_API int    StringLength(string target);
-
-STRING_API int    StringIsHeap(string target);
-STRING_API int    StringIsWeak(string target);
-STRING_API int    StringIsSmart(string target);
+STRING_API bool                 StringIsHeap(const char* target);
+STRING_API bool                 StringIsWeak(const char* target);
+STRING_API bool                 StringIsSmart(const char* target);
 
 #ifdef __cplusplus
 }
@@ -46,58 +69,46 @@ STRING_API int    StringIsSmart(string target);
 #define STRING_CONST_HASH_U64(string, defaultValue) (uint64_t)(defaultValue)
 #endif
 
-#ifndef UINT64_MAX
-typedef unsigned long long uint64_t; 
-#endif
+#define EMPTY_STRING ""
+#define HEAP_MEMTAG  STRING_CONST_HASH_U64("__string_heap_memory_tag__", 0xa020b127788efe8fULL) // ISO CRC64
+#define WEAK_MEMTAG  STRING_CONST_HASH_U64("__string_weak_memory_tag__", 0xb64c61277893498fULL) // ISO CRC64
 
-typedef struct StringBuffer
+bool StringIsHeap(const char* target)
 {
-    int         length;
-    int         memref;
-    uint64_t    memtag;
-    char        data[];
-} StringBuffer;
-
-static string   sEmptyString = "";
-static uint64_t sHeapMemtag  = STRING_CONST_HASH_U64("__string_heap_memory_tag__", 0xa020b127788efe8fULL);  // ISO CRC64
-static uint64_t sWeakMemtag  = STRING_CONST_HASH_U64("__string_stack_memory_tag__", 0xb166f1068d721eceULL); // ISO CRC64
-
-int StringIsHeap(string target)
-{
-    if (target && target != sEmptyString)
+    if (target && target != EMPTY_STRING)
     {
         StringBuffer* buffer = (StringBuffer*)(target - sizeof(StringBuffer));
-        return buffer->memtag == sHeapMemtag;
+        return buffer->memtag == HEAP_MEMTAG;
     }
     else
     {
-        return 0;
+        return false;
     }
 }
 
-int StringIsWeak(string target)
+bool StringIsWeak(const char* target)
 {
-    if (target && target != sEmptyString)
+    if (target && target != EMPTY_STRING)
     {
         StringBuffer* buffer = (StringBuffer*)(target - sizeof(StringBuffer));
-        return buffer->memtag == sWeakMemtag;
+        return buffer->memtag == WEAK_MEMTAG;
     }
     else
     {
-        return 0;
+        return false;
     }
 }
 
-int StringIsSmart(string target)
+bool StringIsSmart(const char* target)
 {
-    if (target && target != sEmptyString)
+    if (target && target != EMPTY_STRING)
     {
         StringBuffer* buffer = (StringBuffer*)(target - sizeof(StringBuffer));
-        return buffer->memtag == sWeakMemtag || buffer->memtag == sHeapMemtag;
+        return buffer->memtag == WEAK_MEMTAG || buffer->memtag == HEAP_MEMTAG;
     }
     else
     {
-        return 0;
+        return false;
     }
 }
 
@@ -106,11 +117,11 @@ StringBuffer* StringBufferNew(int length)
     StringBuffer* buffer = (StringBuffer*)malloc(length + 1 + sizeof(StringBuffer));
     buffer->length = length;
     buffer->memref = 1;
-    buffer->memtag = sHeapMemtag;
+    buffer->memtag = HEAP_MEMTAG;
     return buffer;
 }
 
-string String(string source)
+const char* String(const char* source)
 {
     if (StringIsHeap(source))
     {
@@ -122,7 +133,7 @@ string String(string source)
     int length = StringLength(source);
     if (length == 0)
     {
-        return sEmptyString;
+        return EMPTY_STRING;
     }
     else
     {
@@ -134,7 +145,7 @@ string String(string source)
     }
 }
 
-void StringFree(string target)
+void StringFree(const char* target)
 {
     if (StringIsHeap(target))
     {
@@ -146,18 +157,18 @@ void StringFree(string target)
     }   
 }
 
-string StringFrom(void* buffer, string source)
+const char* StringFrom(void* buffer, const char* source)
 {
     int length = StringLength(source);
     if (length == 0)
     {
-        return sEmptyString;
+        return EMPTY_STRING;
     }
     else
     {
         StringBuffer* stringBuffer = (StringBuffer*)buffer;
         stringBuffer->length = length;
-        stringBuffer->memtag = sWeakMemtag;
+        stringBuffer->memtag = WEAK_MEMTAG;
 
         strncpy(stringBuffer->data, source, length);
         
@@ -165,7 +176,7 @@ string StringFrom(void* buffer, string source)
     }
 }
 
-string StringFormat(int bufferSize, string format, ...)
+const char* StringFormat(int bufferSize, const char* format, ...)
 {
     StringBuffer* buffer = StringBufferNew(bufferSize);
 
@@ -179,14 +190,14 @@ string StringFormat(int bufferSize, string format, ...)
     return buffer->data;
 }
 
-string StringFormatArgv(int bufferSize, string format, va_list argv)
+const char* StringFormatArgv(int bufferSize, const char* format, va_list argv)
 {
     StringBuffer* buffer = StringBufferNew(bufferSize);
     buffer->length = (int)vsnprintf(buffer->data, bufferSize, format, argv);
     return buffer->data;
 }
 
-string StringFormatBuffer(void* buffer, string format, ...)
+const char* StringFormatBuffer(void* buffer, const char* format, ...)
 {
     StringBuffer* stringBuffer = (StringBuffer*)(buffer);
 
@@ -196,24 +207,24 @@ string StringFormatBuffer(void* buffer, string format, ...)
     va_end(argv);
 
     stringBuffer->length = length;
-    stringBuffer->memtag = sWeakMemtag;
+    stringBuffer->memtag = WEAK_MEMTAG;
     
     return stringBuffer->data;
 }
 
-string StringFormatBufferArgv(void* buffer, string format, va_list argv)
+const char* StringFormatBufferArgv(void* buffer, const char* format, va_list argv)
 {
     StringBuffer* stringBuffer = (StringBuffer*)(buffer);
 
     stringBuffer->length = (int)vsprintf(stringBuffer->data, format, argv);
-    stringBuffer->memtag = sWeakMemtag;
+    stringBuffer->memtag = WEAK_MEMTAG;
     
     return stringBuffer->data;
 }
 
-int StringLength(string target)
+int StringLength(const char* target)
 {
-    if (target == sEmptyString)
+    if (target == EMPTY_STRING)
     {
         return 0;
     }
@@ -226,6 +237,23 @@ int StringLength(string target)
     else
     {
         return (int)strlen(target);
+    }
+}
+
+const StringBuffer* StringGetBuffer(const char* target)
+{
+    if (target == EMPTY_STRING)
+    {
+        return NULL;
+    }
+
+    if (StringIsSmart(target))
+    {
+        return (StringBuffer*)(target - sizeof(StringBuffer));
+    }
+    else
+    {
+        return NULL;
     }
 }
 
