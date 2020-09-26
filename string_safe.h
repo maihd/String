@@ -42,7 +42,7 @@ typedef struct StringBuffer
 extern "C" {
 #endif
 
-STRING_API String               string_weak(const char* source);
+STRING_API String               string_ref(const char* source);
 STRING_API String               string_from(const char* source);
 STRING_API void                 string_free(String* target);
 
@@ -128,7 +128,7 @@ StringBuffer* string_new_buffer(int length)
     return buffer;
 }
 
-String string_weak(const char* source)
+String string_ref(const char* source)
 {
     String result = { string_length(source), source ? source : EMPTY_STRING };
     return result;

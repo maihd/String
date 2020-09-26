@@ -8,7 +8,7 @@
 
 int main()
 {
-    String static_greeting = string_weak("Hello world, my name is: DancingConcat");
+    String static_greeting = string_ref("Hello world, my name is: DancingConcat");
     printf("static_greeting.length: %d, static_greeting.content: %s\n", static_greeting.length, static_greeting.buffer);
 
     char buffer[1024];
