@@ -130,7 +130,7 @@ StringBuffer* string_new_buffer(int length)
 
 String string_weak(const char* source)
 {
-    String result = { string_length(source), source };
+    String result = { string_length(source), source ? source : EMPTY_STRING };
     return result;
 }
 
@@ -250,7 +250,7 @@ String string_format_buffer_argv(void* buffer, const char* format, va_list argv)
 
 int string_length(const char* target)
 {
-    if (target == EMPTY_STRING)
+    if (!target || target == EMPTY_STRING)
     {
         return 0;
     }
@@ -268,7 +268,7 @@ int string_length(const char* target)
 
 const StringBuffer* string_buffer(const char* target)
 {
-    if (target == EMPTY_STRING)
+    if (!target || target == EMPTY_STRING)
     {
         return NULL;
     }
