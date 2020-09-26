@@ -8,6 +8,9 @@ endif
 all:
 	$(CC) -o $(EXE) StringTest.c String.c -Wall -Wextra
 
+safe:
+	$(CC) -o $(EXE) string_safe_test.c -Wall -Wextra
+
 clean: 
 	rm -f StringTest
 	rm -f StringTest.exe
