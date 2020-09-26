@@ -44,7 +44,7 @@ extern "C" {
 
 STRING_API String               string_weak(const char* source);
 STRING_API String               string_from(const char* source);
-STRING_API String               string_free(String target);
+STRING_API void                 string_free(String* target);
 
 STRING_API String               string_format(int bufferSize, const char* format, ...);
 STRING_API String               string_format_argv(int bufferSize, const char* format, va_list argv);
@@ -161,23 +161,19 @@ String string_from(const char* source)
     }
 }
 
-String string_free(String target)
+void string_free(String* target)
 {
-    if (string_is_heap(target.buffer))
+    if (string_is_heap(target->buffer))
     {
-        StringBuffer* buffer = (StringBuffer*)(target.buffer - sizeof(StringBuffer));
+        StringBuffer* buffer = (StringBuffer*)(target->buffer - sizeof(StringBuffer));
         if (--buffer->memref <= 0)
         {
             free(buffer);
         }
-        else
-        {
-            return target;
-        }
-    }   
+    }
 
-    String result = { 0, EMPTY_STRING };
-    return result;
+    target->length = 0;
+    target->buffer = EMPTY_STRING;
 }
 
 String string_from_buffer(void* buffer, const char* source)
