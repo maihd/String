@@ -78,6 +78,7 @@ STRING_API bool                 StringIsSmart(const char* target);
 #   define ATOMIC_ADD_I32(variable, value) __sync_fetch_and_add(&(variable), value)
 #   define ATOMIC_SUB_I32(variable, value) __sync_fetch_and_sub(&(variable), value)
 #elif defined(_WIN32)
+#   define WIN32_LEAN_AND_MEAN
 #   include <Windows.h>
 #   define ATOMIC_ADD_I32(variable, value) InterlockedExchange((volatile long*)&(variable), (variable) + value) 
 #   define ATOMIC_SUB_I32(variable, value) InterlockedExchange((volatile long*)&(variable), (variable) - value)
