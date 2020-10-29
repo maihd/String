@@ -74,17 +74,17 @@ STRING_API bool                 StringIsSmart(const char* target);
 #define HEAP_MEMTAG  STRING_CONST_HASH_U64("__string_heap_memory_tag__", 0xa020b127788efe8fULL) // ISO CRC64
 #define WEAK_MEMTAG  STRING_CONST_HASH_U64("__string_weak_memory_tag__", 0xb64c61277893498fULL) // ISO CRC64
 
-#if (__STDC_VERSION_ >= _201112L)
-#   include <stdatomic.h>
-#   define ATOMIC_ADD_I32(variable, value) atomic_fetch_sub((atomic_int*)&(variable), value)
-#   define ATOMIC_SUB_I32(variable, value) atomic_fetch_add((atomic_int*)&(variable), value)
-#elif defined(__GNUC__)
+#if defined(__GNUC__)
 #   define ATOMIC_ADD_I32(variable, value) __sync_fetch_and_add(&(variable), value)
 #   define ATOMIC_SUB_I32(variable, value) __sync_fetch_and_sub(&(variable), value)
 #elif defined(_WIN32)
 #   include <Windows.h>
 #   define ATOMIC_ADD_I32(variable, value) InterlockedExchange((volatile long*)&(variable), (variable) + value) 
 #   define ATOMIC_SUB_I32(variable, value) InterlockedExchange((volatile long*)&(variable), (variable) - value)
+#elif (__STDC_VERSION_ >= _201112L)
+#   include <stdatomic.h>
+#   define ATOMIC_ADD_I32(variable, value) atomic_fetch_sub((atomic_int*)&(variable), value)
+#   define ATOMIC_SUB_I32(variable, value) atomic_fetch_add((atomic_int*)&(variable), value)
 #else
 #   error "This platform is not support atomic operations."
 #endif
