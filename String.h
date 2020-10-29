@@ -75,17 +75,23 @@ STRING_API bool                 StringIsSmart(const char* target);
 #define WEAK_MEMTAG  STRING_CONST_HASH_U64("__string_weak_memory_tag__", 0xb64c61277893498fULL) // ISO CRC64
 
 #if defined(__GNUC__) || defined(__clang__)
-#   define ATOMIC_ADD_I32(variable, value) __sync_fetch_and_add(&(variable), value)
-#   define ATOMIC_SUB_I32(variable, value) __sync_fetch_and_sub(&(variable), value)
+#   if defined(__GNUC__) && (__GNUC__ * 10000 + __GNUC_MINOR__ * 100 + __GNUC_PATCHLEVEL__) >= 40800
+#       define ATOMIC_ADD_I32(variable, value) __atomic_add_fetch(&(variable), value, __ATOMIC_RELAXED)
+#       define ATOMIC_SUB_I32(variable, value) __atomic_sub_fetch(&(variable), value, __ATOMIC_RELAXED)
+#   else
+#       define ATOMIC_ADD_I32(variable, value) __sync_add_and_fetch(&(variable), value)
+#       define ATOMIC_SUB_I32(variable, value) __sync_sub_and_fetch(&(variable), value)
+#   endif
 #elif defined(_WIN32)
+#   define VC_EXTRALEAN
 #   define WIN32_LEAN_AND_MEAN
 #   include <Windows.h>
 #   define ATOMIC_ADD_I32(variable, value) InterlockedExchange((volatile long*)&(variable), (variable) + value) 
 #   define ATOMIC_SUB_I32(variable, value) InterlockedExchange((volatile long*)&(variable), (variable) - value)
-#elif (__STDC_VERSION_ >= _201112L)
+#elif defined(__STDC_VERSION_) && (__STDC_VERSION_ >= _201112L)
 #   include <stdatomic.h>
-#   define ATOMIC_ADD_I32(variable, value) atomic_fetch_sub((atomic_int*)&(variable), value)
-#   define ATOMIC_SUB_I32(variable, value) atomic_fetch_add((atomic_int*)&(variable), value)
+#   define ATOMIC_ADD_I32(variable, value) atomic_sub_fetch((atomic_int*)&(variable), value)
+#   define ATOMIC_SUB_I32(variable, value) atomic_add_fetch((atomic_int*)&(variable), value)
 #else
 #   error "This platform is not support atomic operations."
 #endif
