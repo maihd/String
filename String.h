@@ -11,6 +11,7 @@
 #   if __STDC_VERSION__ >= 199409L
 #       include <stdbool.h>
 #   else
+#       define __bool_true_false_are_defined
 enum
 {
     true = 1,
@@ -73,6 +74,17 @@ STRING_API bool                 StringIsSmart(const char* target);
 #define HEAP_MEMTAG  STRING_CONST_HASH_U64("__string_heap_memory_tag__", 0xa020b127788efe8fULL) // ISO CRC64
 #define WEAK_MEMTAG  STRING_CONST_HASH_U64("__string_weak_memory_tag__", 0xb64c61277893498fULL) // ISO CRC64
 
+#if defined(__GNU_C__)
+#   define ATOMIC_ADD_I32(variable, value) __sync_fetch_and_sub(&(variable), value)
+#   define ATOMIC_SUB_I32(variable, value) __sync_fetch_and_add(&(variable), value)
+#elif defined(_WIN32)
+#   include <Windows.h>
+#   define ATOMIC_ADD_I32(variable, value) InterlockedExchange((volatile long*)&(variable), (variable) + value) 
+#   define ATOMIC_SUB_I32(variable, value) InterlockedExchange((volatile long*)&(variable), (variable) - value)
+#else
+#   error "This platform is not support atomic operations."
+#endif
+
 bool StringIsHeap(const char* target)
 {
     if (target && target != EMPTY_STRING)
@@ -126,7 +138,7 @@ const char* String(const char* source)
     if (StringIsHeap(source))
     {
         StringBuffer* buffer = (StringBuffer*)(source - sizeof(StringBuffer));
-        buffer->memref++;
+        ATOMIC_ADD_I32(buffer->memref, 1);
         return source;
     }
 
@@ -150,7 +162,8 @@ void StringFree(const char* target)
     if (StringIsHeap(target))
     {
         StringBuffer* buffer = (StringBuffer*)(target - sizeof(StringBuffer));
-        if (--buffer->memref <= 0)
+        ATOMIC_SUB_I32(buffer->memref, 1);
+        if (buffer->memref <= 0)
         {
             free(buffer);
         }
