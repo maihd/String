@@ -1,7 +1,7 @@
-CC=cc
+CC=gcc
 EXE=StringTest
 
-CFLAGS=-Wall -Wextra -Wwrite-strings -Wstrict-prototypes -Wredundant-decls -Wno-unused-parameter
+CFLAGS=-Wall -Wextra -Wwrite-strings -Wredundant-decls -Wno-unused-parameter
 
 ifeq (Windows_NT,$(OS))
 EXE=StringTest.exe

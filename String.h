@@ -74,7 +74,7 @@ STRING_API bool                 StringIsSmart(const char* target);
 #define HEAP_MEMTAG  STRING_CONST_HASH_U64("__string_heap_memory_tag__", 0xa020b127788efe8fULL) // ISO CRC64
 #define WEAK_MEMTAG  STRING_CONST_HASH_U64("__string_weak_memory_tag__", 0xb64c61277893498fULL) // ISO CRC64
 
-#if defined(__GNUC__)
+#if defined(__GNUC__) || defined(__clang__)
 #   define ATOMIC_ADD_I32(variable, value) __sync_fetch_and_add(&(variable), value)
 #   define ATOMIC_SUB_I32(variable, value) __sync_fetch_and_sub(&(variable), value)
 #elif defined(_WIN32)
@@ -92,7 +92,7 @@ STRING_API bool                 StringIsSmart(const char* target);
 
 bool StringIsHeap(const char* target)
 {
-    if (target && target != EMPTY_STRING)
+    if (target)
     {
         StringBuffer* buffer = (StringBuffer*)(target - sizeof(StringBuffer));
         return buffer->memtag == HEAP_MEMTAG;
@@ -105,7 +105,7 @@ bool StringIsHeap(const char* target)
 
 bool StringIsWeak(const char* target)
 {
-    if (target && target != EMPTY_STRING)
+    if (target)
     {
         StringBuffer* buffer = (StringBuffer*)(target - sizeof(StringBuffer));
         return buffer->memtag == WEAK_MEMTAG;
@@ -118,7 +118,7 @@ bool StringIsWeak(const char* target)
 
 bool StringIsSmart(const char* target)
 {
-    if (target && target != EMPTY_STRING)
+    if (target)
     {
         StringBuffer* buffer = (StringBuffer*)(target - sizeof(StringBuffer));
         return buffer->memtag == WEAK_MEMTAG || buffer->memtag == HEAP_MEMTAG;
@@ -243,11 +243,6 @@ const char* StringFormatBufferArgv(void* buffer, const char* format, va_list arg
 
 int StringLength(const char* target)
 {
-    if (target == EMPTY_STRING)
-    {
-        return 0;
-    }
-
     if (StringIsSmart(target))
     {
         StringBuffer* buffer = (StringBuffer*)(target - sizeof(StringBuffer));
@@ -261,11 +256,6 @@ int StringLength(const char* target)
 
 const StringBuffer* StringGetBuffer(const char* target)
 {
-    if (target == EMPTY_STRING)
-    {
-        return NULL;
-    }
-
     if (StringIsSmart(target))
     {
         return (StringBuffer*)(target - sizeof(StringBuffer));
@@ -277,3 +267,4 @@ const StringBuffer* StringGetBuffer(const char* target)
 }
 
 #endif // STRING_IMPL
+// EOF, required and empty newline
