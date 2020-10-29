@@ -70,6 +70,11 @@ STRING_API bool                 StringIsSmart(const char* target);
 #define STRING_CONST_HASH_U64(string, defaultValue) (uint64_t)(defaultValue)
 #endif
 
+#ifndef STRING_ASSERT
+#include <assert.h>
+#define STRING_ASSERT(test, message) assert((test) && (message))
+#endif
+
 #define EMPTY_STRING ""
 #define HEAP_MEMTAG  STRING_CONST_HASH_U64("__string_heap_memory_tag__", 0xa020b127788efe8fULL) // ISO CRC64
 #define WEAK_MEMTAG  STRING_CONST_HASH_U64("__string_weak_memory_tag__", 0xb64c61277893498fULL) // ISO CRC64
@@ -98,46 +103,33 @@ STRING_API bool                 StringIsSmart(const char* target);
 
 bool StringIsHeap(const char* target)
 {
-    if (target)
-    {
-        StringBuffer* buffer = (StringBuffer*)(target - sizeof(StringBuffer));
-        return buffer->memtag == HEAP_MEMTAG;
-    }
-    else
-    {
-        return false;
-    }
+    STRING_ASSERT(target != NULL, "Attempt to use null-pointer on string");
+
+    StringBuffer* buffer = (StringBuffer*)(target - sizeof(StringBuffer));
+    return buffer->memtag == HEAP_MEMTAG;
 }
 
 bool StringIsWeak(const char* target)
 {
-    if (target)
-    {
-        StringBuffer* buffer = (StringBuffer*)(target - sizeof(StringBuffer));
-        return buffer->memtag == WEAK_MEMTAG;
-    }
-    else
-    {
-        return false;
-    }
+    STRING_ASSERT(target != NULL, "Attempt to use null-pointer on string");
+
+    StringBuffer* buffer = (StringBuffer*)(target - sizeof(StringBuffer));
+    return buffer->memtag == WEAK_MEMTAG;
 }
 
 bool StringIsSmart(const char* target)
 {
-    if (target)
-    {
-        StringBuffer* buffer = (StringBuffer*)(target - sizeof(StringBuffer));
-        return buffer->memtag == WEAK_MEMTAG || buffer->memtag == HEAP_MEMTAG;
-    }
-    else
-    {
-        return false;
-    }
+    STRING_ASSERT(target != NULL, "Attempt to use null-pointer on string");
+
+    StringBuffer* buffer = (StringBuffer*)(target - sizeof(StringBuffer));
+    return buffer->memtag == WEAK_MEMTAG || buffer->memtag == HEAP_MEMTAG;
 }
 
 StringBuffer* StringBufferNew(int length)
 {
     StringBuffer* buffer = (StringBuffer*)malloc(length + 1 + sizeof(StringBuffer));
+    STRING_ASSERT(buffer != NULL, "Cannot create new buffer, maybe the system have been out of memory.");
+
     buffer->length = length;
     buffer->memref = 1;
     buffer->memtag = HEAP_MEMTAG;
@@ -146,6 +138,8 @@ StringBuffer* StringBufferNew(int length)
 
 const char* String(const char* source)
 {
+    STRING_ASSERT(source != NULL, "Attempt to use null-pointer on string");
+
     if (StringIsHeap(source))
     {
         StringBuffer* buffer = (StringBuffer*)(source - sizeof(StringBuffer));
@@ -170,6 +164,8 @@ const char* String(const char* source)
 
 void StringFree(const char* target)
 {
+    STRING_ASSERT(target != NULL, "Attempt to use null-pointer on string");
+
     if (StringIsHeap(target))
     {
         StringBuffer* buffer = (StringBuffer*)(target - sizeof(StringBuffer));
@@ -184,6 +180,9 @@ void StringFree(const char* target)
 
 const char* StringFrom(void* buffer, const char* source)
 {
+    STRING_ASSERT(buffer != NULL, "Attempt to use null-pointer on buffer");
+    STRING_ASSERT(source != NULL, "Attempt to use null-pointer on string");
+
     int length = StringLength(source);
     if (length == 0)
     {
@@ -196,6 +195,7 @@ const char* StringFrom(void* buffer, const char* source)
         stringBuffer->memtag = WEAK_MEMTAG;
 
         strncpy(stringBuffer->data, source, length);
+        stringBuffer->data[length] = '\0';
         
         return stringBuffer->data;
     }
@@ -203,6 +203,8 @@ const char* StringFrom(void* buffer, const char* source)
 
 const char* StringFormat(int bufferSize, const char* format, ...)
 {
+    STRING_ASSERT(format != NULL, "Attempt to use null-pointer on string");
+
     StringBuffer* buffer = StringBufferNew(bufferSize);
 
     va_list argv;
@@ -217,6 +219,8 @@ const char* StringFormat(int bufferSize, const char* format, ...)
 
 const char* StringFormatArgv(int bufferSize, const char* format, va_list argv)
 {
+    STRING_ASSERT(format != NULL, "Attempt to use null-pointer on string");
+
     StringBuffer* buffer = StringBufferNew(bufferSize);
     buffer->length = (int)vsnprintf(buffer->data, bufferSize, format, argv);
     return buffer->data;
@@ -224,6 +228,9 @@ const char* StringFormatArgv(int bufferSize, const char* format, va_list argv)
 
 const char* StringFormatBuffer(void* buffer, const char* format, ...)
 {
+    STRING_ASSERT(buffer != NULL, "Attempt to use null-pointer on buffer");
+    STRING_ASSERT(format != NULL, "Attempt to use null-pointer on string");
+
     StringBuffer* stringBuffer = (StringBuffer*)(buffer);
 
     va_list argv;
@@ -239,6 +246,9 @@ const char* StringFormatBuffer(void* buffer, const char* format, ...)
 
 const char* StringFormatBufferArgv(void* buffer, const char* format, va_list argv)
 {
+    STRING_ASSERT(buffer != NULL, "Attempt to use null-pointer on buffer");
+    STRING_ASSERT(format != NULL, "Attempt to use null-pointer on string");
+
     StringBuffer* stringBuffer = (StringBuffer*)(buffer);
 
     stringBuffer->length = (int)vsprintf(stringBuffer->data, format, argv);
@@ -249,6 +259,8 @@ const char* StringFormatBufferArgv(void* buffer, const char* format, va_list arg
 
 int StringLength(const char* target)
 {
+    STRING_ASSERT(target != NULL, "Attempt to use null-pointer on string");
+
     if (StringIsSmart(target))
     {
         StringBuffer* buffer = (StringBuffer*)(target - sizeof(StringBuffer));
@@ -262,6 +274,8 @@ int StringLength(const char* target)
 
 const StringBuffer* StringGetBuffer(const char* target)
 {
+    STRING_ASSERT(target != NULL, "Attempt to use null-pointer on string");
+
     if (StringIsSmart(target))
     {
         return (StringBuffer*)(target - sizeof(StringBuffer));
