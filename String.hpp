@@ -35,3 +35,29 @@ struct String
     static String Format(void* buffer, const char* format, ...);
     static String FormatArgv(void* buffer, const char* format, va_list argv);
 };
+
+struct StringView
+{
+    const char* buffer;
+
+    int         length : 30;
+    bool        isOwned : 1;
+    bool        isStatic : 1;
+
+    constexpr StringView()
+        : buffer("")
+        , length(0)
+        , isOwned(false)
+        , isStatic(true)
+    {
+    }
+
+    template <int LENGTH>
+    constexpr StringView(const char (&buffer)[LENGTH])
+        : buffer(buffer)
+        , length(LENGTH)
+        , isOwned(false)
+        , isStatic(true)
+    {
+    }
+};
