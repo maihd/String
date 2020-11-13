@@ -3,6 +3,10 @@
 
 int main()
 {
+    //StringLength(NULL); // This should be assertion by the runtime
+
+    printf("StringLength(\"\") = %d\n", StringLength(""));
+
     const char* staticGreeting = "Hello world, my name is: DancingConcat";
     printf("staticGreeting.length: %d, staticGreeting.content: %s\n", StringLength(staticGreeting), staticGreeting);
 
