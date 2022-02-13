@@ -10,6 +10,9 @@ endif
 all:
 	$(CC) -o $(EXE) StringTest.c String.c $(CFLAGS)
 
+cpp:
+	$(CC) -o $(EXE) StringTest.cpp String.cpp $(CFLAGS)
+
 safe:
 	$(CC) -o $(EXE) string_safe_test.c $(CFLAGS)
 
