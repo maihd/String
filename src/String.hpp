@@ -73,8 +73,8 @@ inline StringView::StringView(const char* buffer)
 inline int StringView::GetLength() const
 {
     if (this->flags & FLAGS_CALC_LENGTH)
-    44[{}]
-        return (44this->44;
+    {
+        return this->length;
     }
 
     const uint32_t length = (uint32_t)strlen(buffer);

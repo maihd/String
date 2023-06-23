@@ -30,6 +30,7 @@ typedef struct StringBuffer
     uint64_t    memtag;
     int         memref;
     int         length;
+    
     char        data[];
 } StringBuffer;
 
@@ -75,30 +76,32 @@ STRING_API bool                 StringIsSmart(const char* target);
 #define STRING_ASSERT(test, message) assert((test) && (message))
 #endif
 
-#define EMPTY_STRING ""
-#define HEAP_MEMTAG  STRING_CONST_HASH_U64("__string_heap_memory_tag__", 0xa020b127788efe8fULL) // ISO CRC64
-#define WEAK_MEMTAG  STRING_CONST_HASH_U64("__string_weak_memory_tag__", 0xb64c61277893498fULL) // ISO CRC64
+#define STRING_EMPTY ""
+
+#define STRING_MEMTAG_HEAP  STRING_CONST_HASH_U64("__string_heap_memory_tag__", 0xa020b127788efe8fULL) // ISO CRC64
+#define STRING_MEMTAG_WEAK  STRING_CONST_HASH_U64("__string_weak_memory_tag__", 0xb64c61277893498fULL) // ISO CRC64
 
 #if defined(__GNUC__) || defined(__clang__)
 #   if defined(__GNUC__) && (__GNUC__ * 10000 + __GNUC_MINOR__ * 100 + __GNUC_PATCHLEVEL__) >= 40800
-#       define ATOMIC_ADD_I32(variable, value) __atomic_add_fetch(&(variable), value, __ATOMIC_RELAXED)
-#       define ATOMIC_SUB_I32(variable, value) __atomic_sub_fetch(&(variable), value, __ATOMIC_RELAXED)
+#       define STRING_ATOMIC_ADD_I32(variable, value) __atomic_add_fetch(&(variable), value, __ATOMIC_RELAXED)
+#       define STRING_ATOMIC_SUB_I32(variable, value) __atomic_sub_fetch(&(variable), value, __ATOMIC_RELAXED)
 #   else
-#       define ATOMIC_ADD_I32(variable, value) __sync_add_and_fetch(&(variable), value)
-#       define ATOMIC_SUB_I32(variable, value) __sync_sub_and_fetch(&(variable), value)
+#       define STRING_ATOMIC_ADD_I32(variable, value) __sync_add_and_fetch(&(variable), value)
+#       define STRING_ATOMIC_SUB_I32(variable, value) __sync_sub_and_fetch(&(variable), value)
 #   endif
 #elif defined(_WIN32)
 #   define VC_EXTRALEAN
 #   define WIN32_LEAN_AND_MEAN
 #   include <Windows.h>
-#   define ATOMIC_ADD_I32(variable, value) InterlockedExchange((volatile long*)&(variable), (variable) + value) 
-#   define ATOMIC_SUB_I32(variable, value) InterlockedExchange((volatile long*)&(variable), (variable) - value)
+#   define STRING_ATOMIC_ADD_I32(variable, value) InterlockedExchange((volatile long*)&(variable), (variable) + value) 
+#   define STRING_ATOMIC_SUB_I32(variable, value) InterlockedExchange((volatile long*)&(variable), (variable) - value)
 #elif defined(__STDC_VERSION_) && (__STDC_VERSION_ >= _201112L)
 #   include <stdatomic.h>
-#   define ATOMIC_ADD_I32(variable, value) atomic_sub_fetch((atomic_int*)&(variable), value)
-#   define ATOMIC_SUB_I32(variable, value) atomic_add_fetch((atomic_int*)&(variable), value)
+#   define STRING_ATOMIC_ADD_I32(variable, value) atomic_sub_fetch((atomic_int*)&(variable), value)
+#   define STRING_ATOMIC_SUB_I32(variable, value) atomic_add_fetch((atomic_int*)&(variable), value)
 #else
-#   error "This platform is not support atomic operations."
+#   define STRING_ATOMIC_ADD_I32(variable, value) ((variable) += (value))
+#   define STRING_ATOMIC_SUB_I32(variable, value) ((variable) -= (value))
 #endif
 
 bool StringIsHeap(const char* target)
@@ -106,7 +109,7 @@ bool StringIsHeap(const char* target)
     STRING_ASSERT(target != NULL, "Attempt to use null-pointer on string");
 
     StringBuffer* buffer = (StringBuffer*)(target - sizeof(StringBuffer));
-    return buffer->memtag == HEAP_MEMTAG;
+    return buffer->memtag == STRING_MEMTAG_HEAP;
 }
 
 bool StringIsWeak(const char* target)
@@ -114,7 +117,7 @@ bool StringIsWeak(const char* target)
     STRING_ASSERT(target != NULL, "Attempt to use null-pointer on string");
 
     StringBuffer* buffer = (StringBuffer*)(target - sizeof(StringBuffer));
-    return buffer->memtag == WEAK_MEMTAG;
+    return buffer->memtag == STRING_MEMTAG_WEAK;
 }
 
 bool StringIsSmart(const char* target)
@@ -122,7 +125,7 @@ bool StringIsSmart(const char* target)
     STRING_ASSERT(target != NULL, "Attempt to use null-pointer on string");
 
     StringBuffer* buffer = (StringBuffer*)(target - sizeof(StringBuffer));
-    return buffer->memtag == WEAK_MEMTAG || buffer->memtag == HEAP_MEMTAG;
+    return buffer->memtag == STRING_MEMTAG_WEAK || buffer->memtag == STRING_MEMTAG_HEAP;
 }
 
 StringBuffer* StringBufferNew(int length)
@@ -130,9 +133,9 @@ StringBuffer* StringBufferNew(int length)
     StringBuffer* buffer = (StringBuffer*)malloc(length + 1 + sizeof(StringBuffer));
     STRING_ASSERT(buffer != NULL, "Cannot create new buffer, maybe the system have been out of memory.");
 
-    buffer->length = length;
+    buffer->memtag = STRING_MEMTAG_HEAP;
     buffer->memref = 1;
-    buffer->memtag = HEAP_MEMTAG;
+    buffer->length = length;
     return buffer;
 }
 
@@ -143,21 +146,19 @@ const char* String(const char* source)
     if (StringIsHeap(source))
     {
         StringBuffer* buffer = (StringBuffer*)(source - sizeof(StringBuffer));
-        ATOMIC_ADD_I32(buffer->memref, 1);
+        STRING_ATOMIC_ADD_I32(buffer->memref, 1);
         return source;
     }
 
     int length = StringLength(source);
     if (length == 0)
     {
-        return EMPTY_STRING;
+        return STRING_EMPTY;
     }
     else
     {
         StringBuffer* buffer = StringBufferNew(length);
-        
         strncpy(buffer->data, source, length);
-        
         return buffer->data;
     }
 }
@@ -170,7 +171,7 @@ void StringFree(const char* target)
     {
         StringBuffer* buffer = (StringBuffer*)(target - sizeof(StringBuffer));
         
-        int memref = ATOMIC_SUB_I32(buffer->memref, 1);
+        int memref = STRING_ATOMIC_SUB_I32(buffer->memref, 1);
         if (memref <= 0)
         {
             free(buffer);
@@ -186,13 +187,14 @@ const char* StringFrom(void* buffer, const char* source)
     int length = StringLength(source);
     if (length == 0)
     {
-        return EMPTY_STRING;
+        return STRING_EMPTY;
     }
     else
     {
         StringBuffer* stringBuffer = (StringBuffer*)buffer;
+        stringBuffer->memtag = STRING_MEMTAG_WEAK;
+        stringBuffer->memref = 1;
         stringBuffer->length = length;
-        stringBuffer->memtag = WEAK_MEMTAG;
 
         strncpy(stringBuffer->data, source, length);
         stringBuffer->data[length] = '\0';
@@ -238,8 +240,9 @@ const char* StringFormatBuffer(void* buffer, const char* format, ...)
     int length = (int)vsprintf(stringBuffer->data, format, argv);
     va_end(argv);
 
+    stringBuffer->memtag = STRING_MEMTAG_WEAK;
+    stringBuffer->memref = 1;
     stringBuffer->length = length;
-    stringBuffer->memtag = WEAK_MEMTAG;
     
     return stringBuffer->data;
 }
@@ -251,8 +254,9 @@ const char* StringFormatBufferArgv(void* buffer, const char* format, va_list arg
 
     StringBuffer* stringBuffer = (StringBuffer*)(buffer);
 
+    stringBuffer->memtag = STRING_MEMTAG_WEAK;
+    stringBuffer->memref = 1;
     stringBuffer->length = (int)vsprintf(stringBuffer->data, format, argv);
-    stringBuffer->memtag = WEAK_MEMTAG;
     
     return stringBuffer->data;
 }

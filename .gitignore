@@ -5,6 +5,7 @@
 *.o
 *.out
 *.exe
+*.pdb
 
 /StringTest
 /StringTest.exe

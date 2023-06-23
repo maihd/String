@@ -8,14 +8,14 @@
 
 int main()
 {
-    String static_greeting = string_ref("Hello world, my name is: DancingConcat");
+    String static_greeting = string_ref("Hello world, my name is: MaiHD");
     printf("static_greeting.length: %d, static_greeting.content: %s\n", static_greeting.length, static_greeting.buffer);
 
     char buffer[1024];
-    String stack_greeting = string_from_buffer(buffer, "Hello world, my name is: DancingConcat");
+    String stack_greeting = string_from_buffer(buffer, "Hello world, my name is: MaiHD");
     printf("stack_greeting.length: %d, stack_greeting.content: %s\n", stack_greeting.length, stack_greeting.buffer);
 
-    String heap_greeting = string_format(64, "Hello world, my name is: %s", "DancingConcat");
+    String heap_greeting = string_format(64, "Hello world, my name is: %s", "MaiHD");
     printf("heap_greeting.length: %d, heap_greeting.content: %s\n", heap_greeting.length, heap_greeting.buffer);
 
     string_free(&static_greeting); // This variable is no need to free, but it's should safe to call

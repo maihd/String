@@ -17,8 +17,8 @@ uint32_t String::SaveBuffer()
     memcpy(newBuffer, buffer, length + 1);
     buffer = (const char*)newBuffer;
 
-    lengthAndFlags &= ~FLAGS_WEAK_REF;
-    lengthAndFlags |= FLAGS_HEAP_ALLOC;
+    flags &= ~FLAGS_WEAK_REF;
+    flags |= FLAGS_HEAP_ALLOC;
     return 0;
 }
 
@@ -29,6 +29,6 @@ void String::FreeBuffer()
         free((void*)buffer);
 
         buffer = "";
-        lengthAndFlags = FLAGS_WEAK_REF | FLAGS_CALC_LENGTH;
+        flags = FLAGS_WEAK_REF | FLAGS_CALC_LENGTH;
     }
 }
